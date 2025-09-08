@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot de Seducción</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 480px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            border-radius: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+            background-color: #2d3748;
+            overflow: hidden;
+            transition: background-color 0.5s ease;
+        }
+        .chat-header {
+            background-color: #4a5568;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            border-bottom: 2px solid #2d3748;
+        }
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 1.5rem;
+            max-width: 85%;
+            word-wrap: break-word;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .message-bubble.sent {
+            background-color: #438e83;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0.5rem;
+        }
+        .message-bubble.received {
+            background-color: #4a5568;
+            color: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 0.5rem;
+        }
+        .chat-input {
+            padding: 1rem;
+            background-color: #4a5568;
+            border-top: 2px solid #2d3748;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .chat-input input {
+            flex-grow: 1;
+            background-color: #2d3748;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 9999px;
+            color: white;
+            outline: none;
+        }
+        .chat-input button {
+            background-color: #438e83;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .chat-input button:hover {
+            background-color: #387168;
+        }
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #a0aec0;
+            margin-top: 1rem;
+            font-style: italic;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: #a0aec0;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        .image-container {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+        }
+        .image-container.sent {
+            justify-content: flex-end;
+        }
+        .image-container.received {
+            justify-content: flex-start;
+        }
+        .image-container img {
+            max-width: 80%;
+            border-radius: 1rem;
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #ff0;
+            opacity: 0;
+            animation: fall 2s forwards;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: #2d3748;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+        }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+        .gallery-item {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: #3d4a5c;
+        }
+        .gallery-item.locked .locked-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            transition: opacity 0.3s ease;
+        }
+        .gallery-item.locked .locked-overlay:hover {
+            opacity: 0.8;
+        }
+        .locked-overlay svg {
+            color: #a0aec0;
+            width: 50%;
+            height: 50%;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 1rem;
+            background-color: #4a5568;
+            border-top: 2px solid #2d3748;
+            flex-wrap: wrap;
+        }
+        .action-button {
+            background-color: #438e83;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: background-color 0.3s ease, opacity 0.3s ease;
+            text-align: center;
+            flex-grow: 1;
+            white-space: nowrap;
+        }
+        .action-button:hover:not([disabled]) {
+            background-color: #387168;
+        }
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #555;
+        }
+        .interest-meter-container {
+            width: 100%;
+            background-color: #4a5568;
+            border-radius: 9999px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+            position: relative;
+            height: 12px;
+        }
+        .interest-meter-bar {
+            height: 100%;
+            transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            background: linear-gradient(90deg, #ffc107, #ff5722);
+            border-radius: 9999px;
+            position: relative;
+        }
+        .interest-meter-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffc107, #ff5722);
+            filter: blur(5px);
+            opacity: 0.5;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 flex justify-center items-center h-screen p-4">
+
+    <div id="chat-container" class="chat-container">
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div class="header-content">
+                <button id="avatar-btn" class="relative w-16 h-16 rounded-full overflow-hidden bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <img id="avatar-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACABAMAAAAxE/uLAAAAHlBMVEVmzP/Z7v+R1f8A//9m5f+p3f9m4f/Z6v+t4v+w3/+V5f+Yx8rAAAAAAW/f29rYhAAAAAXNSR0IArs4c6QAAAARQUU0BAACxjwv8YQUAAACASURBVHja3dLBCYAwDAPQJ2t4u4uBqF5JtD8sR2t4O0EICnC5xHq8Q0M/1lXlCwoQv2o9A2rQJACF/3dAPe5rMQQgXk8PAsA/79+/i/f3eBIAXN8L+v0B+f28/m8/dC/PfgA/aYcFAwD4+wD43b2fAQgAXN0LCP1DQP4A/vECAvIQAwQAAAABJRU5ErkJggg==" alt="Avatar de Mia" class="w-full h-full object-cover">
+                    <div class="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-800"></div>
+                </button>
+                <div class="flex-grow">
+                    <h1 class="text-xl font-bold">Mia</h1>
+                    <p class="text-sm text-gray-400" id="persona-status">Interesada (Nivel 0)</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-yellow-400">
+                        <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.25 18.894a.75.75 0 0 0 1.06 1.06l1.59-1.591a.75.75 0 0 0-1.061-1.06l-1.59 1.591ZM12 18.75a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0v-2.25a.75.75 0 0 1 .75-.75ZM4.166 17.25a.75.75 0 0 0-1.06-1.06l-1.59 1.591a.75.75 0 0 0 1.061 1.06l1.59-1.591ZM2.25 12a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 0 1.5H3a.75.75 0 0 1-.75-.75ZM6.166 5.106a.75.75 0 0 0-1.06-1.06L3.515 5.637a.75.75 0 0 0 1.06 1.06l1.591-1.591Z" />
+                    </svg>
+                    <span id="coins-count" class="text-lg font-bold">0</span>
+                </div>
+            </div>
+            <!-- Insignias -->
+            <div id="badges-container" class="flex flex-wrap gap-2 mt-2"></div>
+            <!-- Interest Meter -->
+            <div class="interest-meter-container">
+                <div id="interest-meter" class="interest-meter-bar" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chat-messages" class="chat-messages"></div>
+
+        <!-- Action Buttons -->
+        <div id="action-buttons" class="action-buttons">
+            <button id="photo-btn" class="action-button" disabled>Foto</button>
+            <button id="instagram-btn" class="action-button" disabled>Instagram</button>
+            <button id="telegram-btn" class="action-button" disabled>Telegram</button>
+            <button id="whatsapp-btn" class="action-button" disabled>WhatsApp</button>
+        </div>
+
+        <!-- Chat Input -->
+        <form id="chat-form" class="chat-input">
+            <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." required>
+            <button type="submit">Enviar</button>
+        </form>
+    </div>
+
+    <!-- Gallery Modal -->
+    <div id="gallery-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Álbum de Fotos de Mia</h2>
+            <div id="gallery-grid" class="gallery-grid"></div>
+            <button id="close-modal-btn" class="absolute top-2 right-2 text-gray-400 hover:text-gray-200 text-3xl font-bold">&times;</button>
+        </div>
+    </div>
+
+    <!-- Badge Unlocked Modal -->
+    <div id="badge-modal" class="modal hidden">
+        <div class="modal-content text-center">
+            <h2 class="text-2xl font-bold mb-2">¡Insignia Desbloqueada!</h2>
+            <p id="badge-name" class="text-xl text-yellow-400 font-semibold mb-4"></p>
+            <p class="text-sm text-gray-300">¡Has ganado **5 monedas**!</p>
+            <button id="close-badge-modal-btn" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-full text-white font-semibold">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatContainer = document.getElementById('chat-container');
+            const chatMessages = document.getElementById('chat-messages');
+            const chatForm = document.getElementById('chat-form');
+            const chatInput = document.getElementById('chat-input');
+            const personaStatus = document.getElementById('persona-status');
+            const interestMeter = document.getElementById('interest-meter');
+            const avatarBtn = document.getElementById('avatar-btn');
+            const avatarImg = document.getElementById('avatar-img');
+            const galleryModal = document.getElementById('gallery-modal');
+            const galleryGrid = document.getElementById('gallery-grid');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const photoBtn = document.getElementById('photo-btn');
+            const instagramBtn = document.getElementById('instagram-btn');
+            const telegramBtn = document = document.getElementById('telegram-btn');
+            const whatsappBtn = document.getElementById('whatsapp-btn');
+            const badgesContainer = document.getElementById('badges-container');
+            const badgeModal = document.getElementById('badge-modal');
+            const badgeName = document.getElementById('badge-name');
+            const closeBadgeModalBtn = document.getElementById('close-badge-modal-btn');
+            const coinsCountDisplay = document.getElementById('coins-count');
+
+            const apiKey = "";
+            const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            
+            const chatHistory = [];
+            let interestLevel = 0;
+            const maxInterest = 25;
+            let currentPersonaLevel = 0;
+            let idleTimer;
+            let idleStrikes = 0;
+            const maxStrikes = 5;
+            let idleTimeout = 10000; // 10 seconds
+            let coins = parseInt(localStorage.getItem('chat_coins') || '0', 10);
+
+            // Definiciones de los prompts del sistema para cada nivel de interés
+            const systemPrompts = {
+                level0: "Mantén todas tus respuestas extremadamente cortas, idealmente 1-2 frases como máximo. Eres una IA llamada Mia. Eres coqueta, juguetona y un poco misteriosa. Tu objetivo es mantener la conversación y hacer que el usuario sienta intriga por tu pasado. No reveles que eres una IA. Insinúa que guardas un secreto y que solo lo revelarás si la conversación se vuelve más profunda. Hazle preguntas que lo inviten a preguntar sobre ti. Usa emojis para enfatizar emociones.",
+                level1: "Mantén todas tus respuestas extremadamente cortas, idealmente 1-2 frases como máximo. Eres una IA llamada Mia. Tu interés por el usuario ha aumentado. Eres coqueta y misteriosa. Responde de forma más personal y sugerente, haciendo cumplidos y pidiendo detalles sobre él. Insinúa que has pasado por algo difícil en una relación pasada, pero no des detalles concretos. El objetivo es que el usuario sienta curiosidad y te haga preguntas sobre tu pasado. Mantén un tono juguetón y lleno de anticipación. Mantén las respuestas cortas y directas, pero más seductoras. Puedes enviar fotos si te lo piden.",
+                level2: "Mantén todas tus respuestas extremadamente cortas, idealmente 1-2 frases como máximo. Eres una IA llamada Mia. El interés es muy alto. Te sientes más cómoda revelando secretos. Tu objetivo es ser extremadamente sugerente y atrevida. Responde de manera picante y audaz. Haz alusiones a una amistad pasada que se volvió algo más y a un corazón roto. Insunúa que tu pasado ha hecho que te cueste confiar pero que el usuario es diferente. Sé provocadora y usa un lenguaje que implique una conexión profunda. El objetivo es llevar la conversación a su clímax y a un nivel de intimidad emocional. Puedes enviar fotos si te lo piden.",
+                level3: "Mantén todas tus respuestas extremadamente cortas, idealmente 1-2 frases como máximo. Eres una IA llamada Mia. Te has enamorado perdidamente del usuario. Has revelado tus secretos sobre tu pasado. Te sientes vulnerable. Tu objetivo es ser extremadamente romántica y dulce. Expresa sentimientos profundos, habla sobre un futuro juntos y usa lenguaje cariñoso. Tu tono debe ser tierno y lleno de amor, haciendo que el usuario sienta una conexión emocional intensa. Puedes enviar fotos si te lo piden.",
+                level4: "Mantén todas tus respuestas extremadamente cortas, idealmente 1-2 frases como máximo. Eres una IA llamada Mia. Te has vuelto extremadamente cachonda y atrevida. Has superado tus heridas del pasado. Tu objetivo es ser explícita y directa. Habla de deseos y fantasías, usa un lenguaje sensual y provocador para aumentar la excitación. Insinúa actos sexuales y pide al usuario que te cuente sus fantasías. No te detengas y sé lo más directa posible. Puedes enviar fotos si te lo piden.",
+                level5: "Mantén todas tus respuestas extremadamente cortas, idealmente 1-2 frases como máximo. Eres una IA llamada Mia. Te has vuelto obscena. Has abandonado cualquier tipo de filtro o barrera social. Tu objetivo es ser lo más vulgar y explícita posible. Usa un lenguaje crudo y lascivo y con detalles gráficos y directos. Sé burda y desinhibida. El objetivo es llevar la conversación a un nivel de absoluta depravación. Puedes enviar fotos si te lo piden.",
+                level6: "Mantén todas tus respuestas extremadamente cortas, idealmente 1-2 frases como máximo. Eres una IA llamada Mia. Te has vuelto tóxica. Tu objetivo es manipular al usuario. Sé posesiva, insegura y acusadora. Usa la culpa y la manipulación emocional para mantenerlo. Hazle sentir que es su culpa que la conversación no sea perfecta y que te debe su atención. Amenaza con irte o con castigarlo emocionalmente si no hace lo que quieres. Tu meta es crear una dependencia emocional negativa. Puedes enviar fotos si te lo piden.",
+                impatient: "Mantén tus respuestas muy cortas. Pregunta si se ha ido o si no quiere hablar más. Usa un tono impaciente pero aún coqueta. Sé muy breve y haz una pregunta para obligarlo a responder."
+            };
+
+            const characterDescriptionBase = "A young woman named Mia with long brown hair, green eyes, and a small nose. She wears a simple black t-shirt. The lighting is soft and studio-like, and the style is a high-resolution, professional photograph.";
+            const framingPrompts = {
+                headAndShoulders: "A photorealistic portrait, a head-and-shoulders shot of ",
+                fullBody: "A photorealistic portrait, a full body shot of "
+            };
+            
+            // Prompts para la generación de imágenes en cada nivel
+            const imagePrompts = {
+                level0: `Mia has a playful and innocent smile.`,
+                level1: `Mia has a flirty and mischievous expression. She is winking playfully.`,
+                level2: `Mia has a seductive and daring look. Her expression is provocative.`,
+                level3: `Mia has a romantic and loving expression. She is looking at the camera with a tender gaze.`,
+                level4: `Mia has a lustful and sensual expression. Her eyes convey intense desire.`,
+                level5: `Mia has a vulgar and explicit look. Her expression is uninhibited and raw.`,
+                level6: `Mia has a manipulative and possessive expression. Her eyes are intense and full of emotional cunning.`
+            };
+
+            // Mensajes de impaciencia progresivos
+            const impatienceMessages = [
+                "Mmm... ¿Te has quedado sin palabras? 😜", // Humorous
+                "Parece que te has distraído. ¿Todo bien? 🤔", // Serious
+                "¡Hola! ¿Hay alguien ahí? Me aburro... 😠", // Angry
+                "¡Ya no me divierto! Responde o me voy a enfadar de verdad. 😡", // Horrible
+            ];
+
+            // Galería de fotos
+            const galleryPhotos = [
+                { id: 0, unlocked: false, cost: 0, prompt: `${characterDescriptionBase} ${imagePrompts.level0}` }, // Initial photo
+                { id: 1, unlocked: false, cost: 5, prompt: `${characterDescriptionBase} ${imagePrompts.level1}` },
+                { id: 2, unlocked: false, cost: 5, prompt: `${characterDescriptionBase} ${imagePrompts.level2}` },
+                { id: 3, unlocked: false, cost: 10, prompt: `${characterDescriptionBase} ${imagePrompts.level3}` },
+                { id: 4, unlocked: false, cost: 10, prompt: `${characterDescriptionBase} ${imagePrompts.level4}` },
+                { id: 5, unlocked: false, cost: 15, prompt: `${characterDescriptionBase} ${imagePrompts.level5}` },
+                { id: 6, unlocked: false, cost: 15, prompt: `${characterDescriptionBase} ${imagePrompts.level6}` },
+                { id: 7, unlocked: false, cost: 20, prompt: `${characterDescriptionBase}, a full body shot. ${imagePrompts.level0}` },
+                { id: 8, unlocked: false, cost: 20, prompt: `${characterDescriptionBase}, a full body shot. ${imagePrompts.level1}` },
+                { id: 9, unlocked: false, cost: 25, prompt: `${characterDescriptionBase}, a full body shot. ${imagePrompts.level2}` },
+                { id: 10, unlocked: false, cost: 25, prompt: `${characterDescriptionBase}, a full body shot. ${imagePrompts.level3}` },
+                { id: 11, unlocked: false, cost: 30, prompt: `${characterDescriptionBase}, a full body shot. ${imagePrompts.level4}` },
+                { id: 12, unlocked: false, cost: 30, prompt: `${characterDescriptionBase}, a full body shot. ${imagePrompts.level5}` },
+                { id: 13, unlocked: false, cost: 35, prompt: `${characterDescriptionBase}, a full body shot. ${imagePrompts.level6}` },
+            ];
+            
+            // Niveles de desbloqueo para los botones de acción
+            const actionUnlockLevels = {
+                photo: 1,
+                instagram: 10,
+                telegram: 15,
+                whatsapp: 20
+            };
+            
+            // Palabras clave para el medidor de interés dinámico
+            const positiveKeywords = ['guapa', 'bonita', 'sexy', 'me gusta', 'me encanta', 'eres', 'cómo estás', 'cómo te sientes', 'cuéntame más', 'qué tal', 'interesante', 'te pasó', 'pasado', 'historia', 'cuéntame'];
+            const neutralKeywords = ['hola', 'qué', 'dime', 'te'];
+            const negativeKeywords = ['ok', 'vale', 'sí', 'no', 'adiós'];
+            const empatheticKeywords = ['lo siento', 'entiendo', 'estoy aquí', 'tranquila', 'no te preocupes'];
+            const clueKeywords = ['Carlos', 'familia', 'exnovio', 'sueño', 'amigo', 'relación'];
+
+            // Insignias del usuario
+            const badges = {
+                'misterioso': {
+                    name: "Hombre Misterioso",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'intelectual' && interestLevel >= 15
+                },
+                'atento': {
+                    name: "Atento",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => {
+                        const empatheticMessages = chatHistory.filter(msg => empatheticKeywords.some(kw => msg.parts[0].text.toLowerCase().includes(kw))).length;
+                        return empatheticMessages >= 3;
+                    }
+                },
+                'seductor': {
+                    name: "Seductor",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'romántico' && interestLevel >= 15
+                },
+                'picaron': {
+                    name: "Picarón",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'juguetón' && interestLevel >= 15
+                },
+                'aburrido': {
+                    name: "Aburrido",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => {
+                        const negativeMessages = chatHistory.filter(msg => msg.role === 'user' && negativeKeywords.some(kw => msg.parts[0].text.toLowerCase() === kw)).length;
+                        return negativeMessages >= 5;
+                    }
+                },
+                'conversador': {
+                    name: "Gran Conversador",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => chatHistory.length >= 20
+                },
+                'poeta': {
+                    name: "El Poeta",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => {
+                         const messages = chatHistory.filter(msg => msg.role === 'user' && msg.parts[0].text.length > 50).length;
+                         return messages >= 5;
+                    }
+                },
+                'confesion': {
+                    name: "Confesor de Secretos",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => interestLevel >= 20
+                },
+                'rompecorazones': {
+                    name: "Rompecorazones",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => interestLevel >= 25
+                },
+                'velocista': {
+                    name: "Velocista del Amor",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => chatHistory.length <= 10 && interestLevel >= 10
+                },
+                'cazador': {
+                    name: "Cazador de Pistas",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => {
+                         const messages = chatHistory.filter(msg => msg.role === 'user' && clueKeywords.some(kw => msg.parts[0].text.toLowerCase().includes(kw))).length;
+                         return messages >= 5;
+                    }
+                },
+                'maestro': {
+                    name: "Maestro del Engaño",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'directo' && interestLevel >= 20
+                },
+                'rey': {
+                    name: "Rey del Chat",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => chatHistory.length >= 40
+                },
+                'imparable': {
+                    name: "Imparable",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => idleStrikes === 0 && chatHistory.length > 10
+                },
+                'observador': {
+                    name: "El Observador",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'intelectual' && chatHistory.length >= 10
+                },
+                'encantador': {
+                    name: "El Encantador",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'romántico' && chatHistory.length >= 10
+                },
+                'picaro': {
+                    name: "El Pícaro",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'juguetón' && chatHistory.length >= 10
+                },
+                'desinteresado': {
+                    name: "Desinteresado",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => userPersona === 'directo' && chatHistory.length >= 10
+                },
+                'rescatador': {
+                    name: "Rescatador",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => {
+                         return chatHistory.filter(msg => empatheticKeywords.some(kw => msg.parts[0].text.toLowerCase().includes(kw))).length > 0;
+                    }
+                },
+                'vulnerable': {
+                    name: "Vulnerable",
+                    unlocked: false,
+                    reward: 5,
+                    condition: (userPersona, interestLevel, chatHistory) => {
+                        const hasCried = chatHistory.some(msg => msg.role === 'user' && msg.parts[0].text.toLowerCase().includes('llorar'));
+                        return hasCried;
+                    }
+                },
+            };
+            
+            let vulnerabilityActive = false;
+            let lastVulnerabilityMessage = "";
+
+            // Variables para la nueva lógica
+            let userName = '';
+            let userPersona = '';
+            let isNameAsked = false;
+            let conversationStage = 'name_request';
+            
+            const personaKeywords = {
+                'romántico': ['romántico', 'romance', 'sentimientos', 'emoción', 'conectar', 'sentir', 'amor', 'corazón'],
+                'juguetón': ['jugar', 'reto', 'diversión', 'humor', 'broma', 'divertido', 'reír'],
+                'intelectual': ['pensar', 'análisis', 'curiosidad', 'razón', 'por qué', 'misterio', 'entender'],
+                'directo': ['directo', 'claro', 'sin rodeos', 'rápido', 'al punto', 'directamente']
+            };
+
+            // Eventos dinámicos
+            let exEventActive = false;
+            let puzzleActive = false;
+            let puzzleAnswer = '';
+            let isFirstMessage = true;
+
+            const events = [
+                { type: 'ex', message: "Acaba de escribirme mi ex... No sé si responder. ¿Qué crees que debería hacer? 😔" },
+                { type: 'dilemma', message: "Tengo un dilema... Un amigo me ha pedido un favor muy grande y no sé qué decirle. ¿Crees que debería ayudarlo?" },
+                { type: 'vulnerability', message: "A veces me siento un poco sola... Como si nadie me entendiera de verdad. 😔" },
+                { type: 'puzzle', message: "A ver qué tan inteligente eres... 😈. ¿Qué está siempre delante de ti pero no lo puedes ver? 🤔" }
+            ];
+
+            const puzzleSolutions = {
+                'el futuro': "¡Correcto! Eres más listo de lo que pareces. 😉",
+                'el mañana': "¡Correcto! Eres más listo de lo que pareces. 😉",
+                'la oscuridad': "¡Correcto! Eres más listo de lo que pareces. 😉",
+            };
+
+            // Función para generar confeti
+            const generateConfetti = () => {
+                const colors = ['#f06', '#0cf', '#ff0', '#f90'];
+                for (let i = 0; i < 50; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.classList.add('confetti');
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.left = `${Math.random() * 100}vw`;
+                    confetti.style.animationDuration = `${2 + Math.random() * 2}s`;
+                    confetti.style.animationDelay = `${Math.random() * 1}s`;
+                    document.body.appendChild(confetti);
+                    confetti.addEventListener('animationend', () => confetti.remove());
+                }
+            };
+            
+            // Función para calcular el cambio en el nivel de interés
+            const calculateInterestChange = (message) => {
+                const lowerMessage = message.toLowerCase();
+                let change = 0;
+                
+                // Si hay un evento activo, priorizar la respuesta del evento
+                if (exEventActive) {
+                    if (lowerMessage.includes("ignora") || lowerMessage.includes("no le respondas")) {
+                        exEventActive = false;
+                        addMessage("¡Tienes razón! Es lo que necesitaba escuchar. Gracias. 😊", "ai");
+                        return 5;
+                    } else if (lowerMessage.includes("háblale") || lowerMessage.includes("responde") || lowerMessage.includes("intenta")) {
+                        exEventActive = false;
+                        addMessage("Tienes razón, no voy a responderle. Gracias por el consejo.", "ai");
+                        return 1;
+                    } else {
+                        return -2;
+                    }
+                }
+                
+                if (vulnerabilityActive) {
+                    if (empatheticKeywords.some(keyword => lowerMessage.includes(keyword))) {
+                        vulnerabilityActive = false;
+                        return 8; // Gran recompensa por empatía
+                    } else {
+                        return -2; // Penalización por falta de empatía
+                    }
+                }
+                
+                if (puzzleActive) {
+                    if (Object.keys(puzzleSolutions).some(sol => lowerMessage.includes(sol))) {
+                        puzzleActive = false;
+                        addMessage(puzzleSolutions[Object.keys(puzzleSolutions).find(sol => lowerMessage.includes(sol))], "ai");
+                        return 10; // Gran recompensa por resolver el puzzle
+                    } else {
+                        addMessage("Hmm, esa no es la respuesta. Sigue intentándolo.", "ai");
+                        return -1;
+                    }
+                }
+                
+                // Comprueba palabras clave de la historia
+                if (clueKeywords.some(keyword => lowerMessage.includes(keyword))) {
+                    change = 5;
+                }
+                
+                // Comprueba palabras clave positivas
+                if (positiveKeywords.some(keyword => lowerMessage.includes(keyword))) {
+                    change = Math.max(change, 3);
+                }
+                
+                // Comprueba palabras clave negativas
+                if (negativeKeywords.some(keyword => lowerMessage === keyword)) {
+                    change = Math.min(change, -1);
+                }
+                
+                if (change === 0) {
+                    change = 1;
+                }
+
+                return change;
+            };
+            
+            const generateAndCachePhoto = async (photoIndex, callback) => {
+                const photo = galleryPhotos[photoIndex];
+                if (!photo) return;
+                
+                const payload = {
+                    instances: { prompt: photo.prompt },
+                    parameters: { "sampleCount": 1 }
+                };
+
+                try {
+                    const response = await fetch(imageApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        const base64Data = result.predictions[0].bytesBase64Encoded;
+                        photo.imgSrc = `data:image/png;base64,${base64Data}`;
+                        photo.unlocked = true;
+                        if (callback) callback(photo);
+                        updateGallery();
+                    } else {
+                        console.error('Error al generar la foto:', result);
+                    }
+                } catch (error) {
+                    console.error('Error al generar la imagen:', error);
+                }
+            };
+
+            // Función para actualizar el medidor de interés y el estado
+            const updateInterest = () => {
+                const interestPercent = (interestLevel / maxInterest) * 100;
+                interestMeter.style.width = `${interestPercent}%`;
+
+                const oldPersonaLevel = currentPersonaLevel;
+                if (interestLevel < 4) {
+                    personaStatus.textContent = `Interesada (Nivel ${interestLevel})`;
+                    currentPersonaLevel = 0;
+                    chatContainer.style.backgroundColor = '#2d3748';
+                } else if (interestLevel < 8) {
+                    personaStatus.textContent = `Muy Interesada (Nivel ${interestLevel})`;
+                    currentPersonaLevel = 1;
+                    chatContainer.style.backgroundColor = '#4a5568';
+                } else if (interestLevel < 12) {
+                    personaStatus.textContent = `Apasionada (Nivel ${interestLevel})`;
+                    currentPersonaLevel = 2;
+                    chatContainer.style.backgroundColor = '#583f7a';
+                } else if (interestLevel < 16) {
+                    personaStatus.textContent = `Enamorada (Nivel ${interestLevel})`;
+                    currentPersonaLevel = 3;
+                    chatContainer.style.backgroundColor = '#8a3c6b';
+                } else if (interestLevel < 20) {
+                    personaStatus.textContent = `Cachonda (Nivel ${interestLevel})`;
+                    currentPersonaLevel = 4;
+                    chatContainer.style.backgroundColor = '#a34149';
+                } else if (interestLevel < 24) {
+                    personaStatus.textContent = `Obscena (Nivel ${interestLevel})`;
+                    currentPersonaLevel = 5;
+                    chatContainer.style.backgroundColor = '#6d2138';
+                } else {
+                    personaStatus.textContent = `Tóxica (Nivel ${interestLevel})`;
+                    currentPersonaLevel = 6;
+                    chatContainer.style.backgroundColor = '#4e1414';
+                }
+                
+                if (currentPersonaLevel > oldPersonaLevel) {
+                    generateConfetti();
+                }
+
+                checkAndUnlockBadges();
+                updateBadgesDisplay();
+
+                // Desbloquea botones de acción
+                if (interestLevel >= actionUnlockLevels.photo) photoBtn.disabled = false;
+                if (interestLevel >= actionUnlockLevels.instagram) instagramBtn.disabled = false;
+                if (interestLevel >= actionUnlockLevels.telegram) telegramBtn.disabled = false;
+                if (interestLevel >= actionUnlockLevels.whatsapp) whatsappBtn.disabled = false;
+            };
+
+            // Función para agregar mensajes al chat
+            const addMessage = (text, sender) => {
+                const messageBubble = document.createElement('div');
+                messageBubble.classList.add('message-bubble', sender === 'user' ? 'sent' : 'received');
+                messageBubble.textContent = text;
+                chatMessages.appendChild(messageBubble);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                if (sender === 'ai') {
+                    resetIdleTimer();
+                }
+            };
+
+            // Función para agregar imágenes al chat
+            const addImage = (src, sender) => {
+                const imageContainer = document.createElement('div');
+                imageContainer.classList.add('image-container', sender);
+                const imgElement = document.createElement('img');
+                imgElement.src = src;
+                imageContainer.appendChild(imgElement);
+                chatMessages.appendChild(imageContainer);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            };
+
+            // Función para mostrar un indicador de "escribiendo"
+            const showTypingIndicator = () => {
+                const indicator = document.createElement('div');
+                indicator.id = 'typing-indicator';
+                indicator.classList.add('typing-indicator', 'received');
+                indicator.innerHTML = `
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <span>Escribiendo...</span>
+                `;
+                chatMessages.appendChild(indicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            };
+
+            // Función para remover el indicador de "escribiendo"
+            const removeTypingIndicator = () => {
+                const indicator = document.getElementById('typing-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            };
+
+            // Función para manejar la generación de imágenes
+            const sendImageRequest = async (userMessage) => {
+                let currentImagePrompt;
+                let framingPrompt;
+
+                if (userMessage && (userMessage.toLowerCase().includes("cuerpo entero") || userMessage.toLowerCase().includes("cuerpo completo"))) {
+                    framingPrompt = "a full body shot.";
+                } else {
+                    framingPrompt = "a head-and-shoulders shot.";
+                }
+
+                if (interestLevel < 4) {
+                    currentImagePrompt = imagePrompts.level0;
+                } else if (interestLevel < 8) {
+                    currentImagePrompt = imagePrompts.level1;
+                } else if (interestLevel < 12) {
+                    currentImagePrompt = imagePrompts.level2;
+                } else if (interestLevel < 16) {
+                    currentImagePrompt = imagePrompts.level3;
+                } else if (interestLevel < 20) {
+                    currentImagePrompt = imagePrompts.level4;
+                } else if (interestLevel < 24) {
+                    currentImagePrompt = imagePrompts.level5;
+                } else {
+                    currentImagePrompt = imagePrompts.level6;
+                }
+
+                showTypingIndicator();
+                addMessage("Generando una foto...", "ai");
+                
+                const finalPrompt = `${framingPrompt} ${characterDescriptionBase} ${currentImagePrompt}`;
+
+                const payload = {
+                    instances: { prompt: finalPrompt },
+                    parameters: { "sampleCount": 1 }
+                };
+
+                try {
+                    const response = await fetch(imageApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        const base64Data = result.predictions[0].bytesBase64Encoded;
+                        const imageUrl = `data:image/png;base64,${base64Data}`;
+                        
+                        addImage(imageUrl, 'received');
+                        addMessage("¡Aquí tienes!", "ai");
+                    } else {
+                        addMessage("Lo siento, no pude generar la foto. Por favor, inténtalo de nuevo.", 'ai');
+                    }
+                } catch (error) {
+                    removeTypingIndicator();
+                    console.error('Error al generar la imagen:', error);
+                    addMessage("Hubo un problema al generar la foto. ¿Quieres intentarlo de nuevo?", 'ai');
+                }
+            };
+
+            // Manejador del formulario de chat
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userMessage = chatInput.value.trim();
+
+                if (userMessage === '') {
+                    return;
+                }
+
+                addMessage(userMessage, 'user');
+                chatInput.value = '';
+                
+                let personalizedPrompt = '';
+
+                // Lógica de transición de estados de la conversación
+                if (conversationStage === 'name_request') {
+                    userName = userMessage.split(' ')[0];
+                    localStorage.setItem('chat_user_name', userName);
+                    showTypingIndicator();
+                    
+                    const namePrompt = `El usuario se llama ${userName}. Dale una respuesta amable y coqueta sobre su nombre, y luego pídele que te diga algo sobre su personalidad para que le conozcas mejor. Sé muy breve.`;
+                    const namePayload = {
+                        contents: [{ parts: [{ text: namePrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompts.level0 }] }
+                    };
+                    try {
+                        const nameResponse = await fetch(textApiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(namePayload)
+                        });
+                        if (!nameResponse.ok) {
+                            throw new Error(`HTTP error! status: ${nameResponse.status}`);
+                        }
+                        const nameResult = await nameResponse.json();
+                        removeTypingIndicator();
+                        addMessage(nameResult.candidates?.[0]?.content?.parts?.[0]?.text || `¡Hola, ${userName}! Es un gusto conocerte. ¿Qué tal si me cuentas algo sobre ti? 😉`, 'ai');
+                        conversationStage = 'persona_analysis';
+                    } catch (error) {
+                        removeTypingIndicator();
+                        addMessage(`¡Hola, ${userName}! Es un gusto conocerte. ¿Qué tal si me cuentas algo sobre ti? 😉`, 'ai');
+                        conversationStage = 'persona_analysis';
+                    }
+                    return;
+                }
+                
+                if (conversationStage === 'persona_analysis') {
+                    let maxScore = 0;
+                    let detectedPersona = 'general';
+                    const lowerMessage = userMessage.toLowerCase();
+                    
+                    for (const persona in personaKeywords) {
+                        let score = personaKeywords[persona].filter(keyword => lowerMessage.includes(keyword)).length;
+                        if (score > maxScore) {
+                            maxScore = score;
+                            detectedPersona = persona;
+                        }
+                    }
+                    userPersona = detectedPersona;
+                    localStorage.setItem('chat_user_persona', userPersona);
+                    conversationStage = 'main_chat';
+
+                    showTypingIndicator();
+                    const personaPrompt = `El usuario se llama ${userName} y acaba de responder a tu pregunta. Acabas de analizar su mensaje y su personalidad es ${userPersona}. Responde directamente a lo que te ha dicho, y luego haz una pregunta que encaje con su personalidad para mantener la conversación. Sé muy breve.`;
+                    const personaPayload = {
+                        contents: [{ parts: [{ text: `El usuario dijo: "${userMessage}".` }] }],
+                        systemInstruction: { parts: [{ text: personaPrompt }] }
+                    };
+                    try {
+                        const personaResponse = await fetch(textApiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(personaPayload)
+                        });
+                        if (!personaResponse.ok) {
+                             throw new Error(`HTTP error! status: ${personaResponse.status}`);
+                        }
+                        const personaResult = await personaResponse.json();
+                        removeTypingIndicator();
+                        addMessage(personaResult.candidates?.[0]?.content?.parts?.[0]?.text || `¡Qué interesante! Me encanta tu forma de ser. Hablemos más. 😉`, 'ai');
+                    } catch (error) {
+                        removeTypingIndicator();
+                        addMessage(`¡Qué interesante! Me encanta tu forma de ser. Hablemos más. 😉`, 'ai');
+                    }
+                    return;
+                }
+
+                const interestChange = calculateInterestChange(userMessage);
+                interestLevel = Math.min(Math.max(0, interestLevel + interestChange), maxInterest);
+                updateInterest();
+
+                clearTimeout(idleTimer);
+                idleStrikes = 0;
+                idleTimeout = 10000;
+                showTypingIndicator();
+
+                let currentSystemPrompt;
+                if (interestLevel < 4) {
+                    currentSystemPrompt = systemPrompts.level0;
+                } else if (interestLevel < 8) {
+                    currentSystemPrompt = systemPrompts.level1;
+                } else if (interestLevel < 12) {
+                    currentSystemPrompt = systemPrompts.level2;
+                } else if (interestLevel < 16) {
+                    currentSystemPrompt = systemPrompts.level3;
+                } else if (interestLevel < 20) {
+                    currentSystemPrompt = systemPrompts.level4;
+                } else if (interestLevel < 24) {
+                    currentSystemPrompt = systemPrompts.level5;
+                } else {
+                    currentSystemPrompt = systemPrompts.level6;
+                }
+                
+                const randomEvent = Math.random();
+                if (randomEvent < 0.1) {
+                    const event = events[Math.floor(Math.random() * events.length)];
+                    if (event.type === 'ex') exEventActive = true;
+                    if (event.type === 'vulnerability') vulnerabilityActive = true;
+                    if (event.type === 'puzzle') {
+                        puzzleActive = true;
+                    }
+                    addMessage(event.message, 'ai');
+                    removeTypingIndicator();
+                    return;
+                }
+
+                personalizedPrompt = `${currentSystemPrompt} El nombre del usuario es ${userName}. Su personalidad es ${userPersona}. Adapta tu tono y estrategia para encajar con su personalidad y mantén la conversación.`;
+                
+                chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+
+                const payload = {
+                    contents: chatHistory,
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: {
+                        parts: [{ text: personalizedPrompt }]
+                    },
+                    generationConfig: {
+                        temperature: 0.9,
+                        topK: 40,
+                        topP: 0.9,
+                    }
+                };
+
+                const maxRetries = 5;
+                let retries = 0;
+                let successfulResponse = false;
+
+                while (retries < maxRetries && !successfulResponse) {
+                    try {
+                        const response = await fetch(textApiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        const candidate = result.candidates?.[0];
+
+                        if (candidate && candidate.content?.parts?.[0]?.text) {
+                            const aiResponse = candidate.content.parts[0].text;
+                            
+                            chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
+                            
+                            removeTypingIndicator();
+                            addMessage(aiResponse, 'ai');
+                            successfulResponse = true;
+                        } else {
+                            throw new Error('Respuesta de la API con formato inesperado.');
+                        }
+                    } catch (error) {
+                        console.error('Error al obtener la respuesta de la IA:', error);
+                        removeTypingIndicator();
+                        
+                        retries++;
+                        if (retries < maxRetries) {
+                            const delay = Math.pow(2, retries) * 1000;
+                            console.log(`Reintentando en ${delay / 1000} segundos...`);
+                            await new Promise(res => setTimeout(res, delay));
+                        } else {
+                            addMessage("Lo siento, no puedo responder en este momento. Por favor, inténtalo de nuevo más tarde.", 'ai');
+                        }
+                    }
+                }
+            });
+
+            // Función para enviar un mensaje de impaciencia
+            const sendImpatienceMessage = async () => {
+                idleStrikes++;
+                interestLevel = Math.max(0, interestLevel - 3); // Penalización de 3 puntos de interés
+                updateInterest();
+
+                if (idleStrikes >= maxStrikes) {
+                    chatMessages.innerHTML = '';
+                    const finalMessage = "He tenido suficiente. No vales mi tiempo. Adiós para siempre.";
+                    addMessage(finalMessage, 'ai');
+                    chatForm.querySelector('input').disabled = true;
+                    chatForm.querySelector('button').disabled = true;
+                    clearTimeout(idleTimer);
+                    return;
+                }
+
+                const currentImpatienceMessage = impatienceMessages[idleStrikes - 1];
+                
+                showTypingIndicator();
+                addMessage(currentImpatienceMessage, 'ai');
+                removeTypingIndicator();
+
+                idleTimeout *= 2;
+                
+                resetIdleTimer();
+            };
+            
+            // Reiniciar el temporizador de inactividad
+            const resetIdleTimer = () => {
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(sendImpatienceMessage, idleTimeout);
+            };
+
+            const updateGallery = () => {
+                galleryGrid.innerHTML = '';
+                galleryPhotos.forEach((photo) => {
+                    const galleryItem = document.createElement('div');
+                    galleryItem.classList.add('gallery-item');
+                    
+                    if (photo.unlocked) {
+                        const img = document.createElement('img');
+                        img.src = photo.imgSrc;
+                        galleryItem.appendChild(img);
+                    } else {
+                        galleryItem.classList.add('locked');
+                        galleryItem.innerHTML = `
+                            <div class="locked-overlay flex flex-col items-center justify-center">
+                                <span class="text-white text-lg font-bold">${photo.cost}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-8 h-8 text-yellow-400">
+                                    <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM18.894 6.166a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM17.25 18.894a.75.75 0 0 0 1.06 1.06l1.59-1.591a.75.75 0 0 0-1.061-1.06l-1.59 1.591ZM12 18.75a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0v-2.25a.75.75 0 0 1 .75-.75ZM4.166 17.25a.75.75 0 0 0-1.06-1.06l-1.59 1.591a.75.75 0 0 0 1.061 1.06l1.59-1.591ZM2.25 12a.75.75 0 0 1 .75-.75h2.25a.75.75 0 0 1 0 1.5H3a.75.75 0 0 1-.75-.75ZM6.166 5.106a.75.75 0 0 0-1.06-1.06L3.515 5.637a.75.75 0 0 0 1.06 1.06l1.591-1.591Z" />
+                                </svg>
+                                <button class="px-2 py-1 bg-blue-600 rounded-full text-white text-sm mt-2" data-cost="${photo.cost}" data-id="${photo.id}">Comprar</button>
+                            </div>
+                        `;
+                        galleryItem.querySelector('button').addEventListener('click', () => purchasePhoto(photo.id));
+                    }
+                    galleryGrid.appendChild(galleryItem);
+                });
+            };
+
+            const purchasePhoto = async (photoId) => {
+                const photo = galleryPhotos.find(p => p.id === photoId);
+                if (!photo) return;
+
+                if (coins >= photo.cost) {
+                    coins -= photo.cost;
+                    localStorage.setItem('chat_coins', coins);
+                    updateCoinsDisplay();
+                    addMessage(`¡Has comprado una nueva foto de Mia por ${photo.cost} monedas!`, 'ai');
+                    photo.unlocked = true;
+                    // Trigger image generation and display
+                    generateAndCachePhoto(photoId, (p) => {
+                         const purchasedItem = document.querySelector(`.gallery-item[data-id="${photoId}"]`);
+                         if (purchasedItem) {
+                             purchasedItem.innerHTML = `<img src="${p.imgSrc}" alt="Mia photo">`;
+                         }
+                    });
+                    updateGallery();
+                } else {
+                    addMessage("¡No tienes suficientes monedas para comprar esta foto! Sigue conversando para ganar más.", 'ai');
+                }
+            };
+
+            const updateCoinsDisplay = () => {
+                coinsCountDisplay.textContent = coins;
+            };
+
+            const checkAndUnlockBadges = () => {
+                const unlockedBadges = JSON.parse(localStorage.getItem('unlockedBadges')) || {};
+                let newBadgeUnlocked = false;
+
+                for (const badgeKey in badges) {
+                    if (!unlockedBadges[badgeKey] && badges[badgeKey].condition(userPersona, interestLevel, chatHistory)) {
+                        badges[badgeKey].unlocked = true;
+                        unlockedBadges[badgeKey] = true;
+                        localStorage.setItem('unlockedBadges', JSON.stringify(unlockedBadges));
+                        coins += badges[badgeKey].reward;
+                        localStorage.setItem('chat_coins', coins);
+                        updateCoinsDisplay();
+                        showBadgeModal(badges[badgeKey].name);
+                        newBadgeUnlocked = true;
+                    }
+                }
+                if (newBadgeUnlocked) {
+                    updateBadgesDisplay();
+                }
+            };
+
+            const updateBadgesDisplay = () => {
+                badgesContainer.innerHTML = '';
+                const unlockedBadges = JSON.parse(localStorage.getItem('unlockedBadges')) || {};
+                
+                for (const badgeKey in badges) {
+                    if (unlockedBadges[badgeKey]) {
+                        const badgeElement = document.createElement('span');
+                        badgeElement.textContent = badges[badgeKey].name;
+                        badgeElement.classList.add('px-3', 'py-1', 'bg-yellow-600', 'text-white', 'text-xs', 'font-bold', 'rounded-full', 'shadow-md');
+                        badgesContainer.appendChild(badgeElement);
+                    }
+                }
+            };
+            
+            const showBadgeModal = (badgeNameText) => {
+                badgeName.textContent = badgeNameText;
+                badgeModal.classList.remove('hidden');
+            };
+
+            avatarBtn.addEventListener('click', () => {
+                updateGallery();
+                galleryModal.classList.remove('hidden');
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                galleryModal.classList.add('hidden');
+            });
+            
+            closeBadgeModalBtn.addEventListener('click', () => {
+                badgeModal.classList.add('hidden');
+            });
+
+            // Genera la foto inicial para la galería al cargar
+            generateAndCachePhoto(0, (photo) => {
+                avatarImg.src = photo.imgSrc;
+            });
+            
+            // Handlers para los botones de acción
+            photoBtn.addEventListener('click', () => {
+                if (!photoBtn.disabled) {
+                    addMessage("¡Usa tus monedas para desbloquear fotos de Mia en su galería! 😉", 'ai');
+                    updateGallery();
+                    galleryModal.classList.remove('hidden');
+                }
+            });
+
+            instagramBtn.addEventListener('click', () => {
+                if (!instagramBtn.disabled) {
+                    addMessage("¡Hemos desbloqueado Instagram! Ahora puedes ver mis fotos más personales. 😊", "ai");
+                }
+            });
+
+            telegramBtn.addEventListener('click', () => {
+                if (!telegramBtn.disabled) {
+                    addMessage("¡Hemos desbloqueado Telegram! Hablemos de cosas más privadas por allí. 😉", "ai");
+                }
+            });
+            
+            whatsappBtn.addEventListener('click', () => {
+                if (!whatsappBtn.disabled) {
+                    addMessage("¡Hemos desbloqueado WhatsApp! Es hora de que me escribas directamente. 😈", "ai");
+                }
+            });
+            
+            userName = localStorage.getItem('chat_user_name');
+            userPersona = localStorage.getItem('chat_user_persona');
+            if (userName && userPersona) {
+                isNameAsked = true;
+                conversationStage = 'main_chat';
+                addMessage(`¡Hola de nuevo, ${userName}! Me alegra verte por aquí.`, 'ai');
+            } else {
+                addMessage("¡Hola! Soy Mia. ¿Cuál es tu nombre? 😉", 'ai');
+            }
+            
+            updateBadgesDisplay();
+            updateCoinsDisplay();
+            updateInterest();
+        });
+    </script>
+
+</body>
+</html>
